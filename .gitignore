@@ -1,0 +1,28 @@
+# Python virtual environment
+/venv/
+/env/
+/.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE and editor directories
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Python build artifacts
+/dist/
+/build/
+*.egg-info/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints

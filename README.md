@@ -1,7 +1,5 @@
 # Self-Healing Classification DAG with a Fine-Tuned Transformer
 
-**ATG Technical Assignment**
-
 This project implements a robust, self-healing text classification pipeline for sentiment analysis. It uses a `distilbert-base-uncased` model fine-tuned with LoRA on the SST-2 dataset. The entire workflow is orchestrated by LangGraph and includes a backup zero-shot model and live session statistics as bonus features.
 
 The system intelligently decides whether to trust its primary model, consult a backup model, or ask a human for clarification based on prediction confidence, ensuring high reliability in human-in-the-loop workflows.

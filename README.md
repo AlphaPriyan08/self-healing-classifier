@@ -41,8 +41,8 @@ The core of the system is a Directed Acyclic Graph (DAG) that prioritizes reliab
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repo-url>
-    cd <your-repo-name>
+    git clone https://github.com/AlphaPriyan08/self-healing-classifier
+    cd self-healing-classifier
     ```
 
 2.  **Create and activate a Python virtual environment:**

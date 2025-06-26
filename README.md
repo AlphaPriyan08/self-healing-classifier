@@ -145,4 +145,3 @@ Enter a sentence: quit
 ## Demo Video
 
 [View the Demo on Google Drive](https://drive.google.com/file/d/11Utos_eanTtRJABIUV6vJRbRBZL7L7jk/view?usp=sharing)
-```

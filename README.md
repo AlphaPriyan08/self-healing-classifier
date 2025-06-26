@@ -1,5 +1,7 @@
 # Self-Healing Classification DAG with a Fine-Tuned Transformer
 
+**ATG Technical Assignment**
+
 This project implements a robust, self-healing text classification pipeline for sentiment analysis. It uses a `distilbert-base-uncased` model fine-tuned with LoRA on the SST-2 dataset. The entire workflow is orchestrated by LangGraph and includes a backup zero-shot model and live session statistics as bonus features.
 
 The system intelligently decides whether to trust its primary model, consult a backup model, or ask a human for clarification based on prediction confidence, ensuring high reliability in human-in-the-loop workflows.
@@ -9,23 +11,24 @@ The system intelligently decides whether to trust its primary model, consult a b
 The core of the system is a Directed Acyclic Graph (DAG) that prioritizes reliability. The workflow is as follows:
 
 ```
-+----------------+      +------------------+      +-----------------------+         +---------------------+
-|   User Input   |----->|  InferenceNode   |----->|  ConfidenceCheck      |-------->|  Final Output &     |
-+----------------+      | (Primary Model)  |      |    (Edge Logic)       |         | Session Statistics  |
-                        +------------------+      +-----------+-----------+         +---------------------+
-                                                          |                 (Confidence >= 99%)
-                                       (Confidence < 99%) |
-                                                          v
-                                              +------------------------+
-                                              |      FallbackNode      |
-                                              | (+ Backup Zero-Shot)   |
-                                              +-----------+------------+
-                                                          | (Engage Human)
-                                                          v
-                                              +------------------------+
-                                              |    Final Output &      |
-                                              | Session Statistics     |
-                                              +------------------------+
++----------------+      +------------------+      +-----------------------+
+|   User Input   |----->|  InferenceNode   |----->|  ConfidenceCheck      |
++----------------+      | (Primary Model)  |      |    (Edge Logic)       |
+                        +------------------+      +-----------+-----------+
+                                                          |
+             +--------------------------------------------+---------------------------------------------+
+             | (Confidence >= 99%)                                                                      | (Confidence < 99%)
+             v                                                                                          v
++------------------------+                                                                  +------------------------+
+|    Final Output &      |                                                                  |      FallbackNode      |
+| Session Statistics     |                                                                  | (+ Backup Zero-Shot)   |
++------------------------+                                                                  +-----------+------------+
+                                                                                                        | (Engage Human)
+                                                                                                        v
+                                                                                            +------------------------+
+                                                                                            |    Final Output &      |
+                                                                                            | Session Statistics     |
+                                                                                            +------------------------+
 ```
 
 1.  **Inference Node**: Classifies input using the fine-tuned LoRA model.
@@ -73,11 +76,73 @@ This script loads the fine-tuned model and starts the interactive command-line i
 python main.py
 ```
 
-### CLI Flow Explained
+## Sample CLI Interaction
 
-1.  You will be prompted to **"Enter a sentence"**.
-2.  For a clear sentence (e.g., "I love this movie"), the model will be highly confident, and you will see the final result immediately.
-3.  For an ambiguous sentence (e.g., "The film was okay I guess"), the model's confidence will be below the threshold, triggering the fallback.
-4.  The system will ask you to confirm or correct the prediction.
-5.  After your input, the final, verified classification is shown.
-6.  All interactions are logged in `app.log`.
+Here is a sample of a full interaction with the application, demonstrating both the high-confidence path and the self-healing fallback path.
+
+```
+Loading model from ./distilbert-sst2-lora/...
+Model loaded successfully.
+Loading backup zero-shot model...
+Backup model loaded.
+──────────────── Self-Healing Sentiment Classifier ─────────────────
+Confidence Threshold: 99%
+Enter text to classify or type 'quit' to exit.
+
+Enter a sentence: I love this movie
+╭─────────────────────── Inference Result ─────────────────────────╮
+│ [InferenceNode] Predicted label: 'POSITIVE' | Confidence: 99.95% │
+╰──────────────────────────────────────────────────────────────────╯
+╭──────────────── Final Classification ────────────────╮
+│ Input: 'I love this movie'                           │
+│         Final Label: POSITIVE                        │
+│         Correction Required: No                      │
+╰──────────────────────────────────────────────────────╯
+       Session Statistics
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
+┃ Metric              ┃ Value  ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━┩
+│ Total Predictions   │ 1      │
+│ Average Confidence  │ 99.95% │
+│ Fallbacks Triggered │ 0      │
+│ Fallback Rate       │ 0.0%   │
+│ Fallback Frequency  │ [ ]    │
+└─────────────────────┴────────┘
+
+Enter a sentence: The film was okay I guess
+╭────────────────────── Inference Result ──────────────────────────╮
+│ [InferenceNode] Predicted label: 'POSITIVE' | Confidence: 91.47% │
+╰──────────────────────────────────────────────────────────────────╯
+╭─────────────────────── Fallback Activated ─────────────────────────╮
+│ [FallbackNode] Confidence is low. Engaging user for clarification. │
+╰────────────────────────────────────────────────────────────────────╯
+Getting a second opinion from a zero-shot model...
+╭─────────────── Backup Model Result (Zero-Shot) ──────────╮
+│ [BackupModel] Predicted: 'POSITIVE' | Confidence: 76.52% │
+╰──────────────────────────────────────────────────────────╯
+The primary model predicted 'POSITIVE', and the backup predicted 'POSITIVE'.
+How would you classify this? (Or type 'y' to accept 'POSITIVE') [y/positive/negative] (y): negative
+[FallbackNode] User corrected prediction to: 'NEGATIVE'
+╭──────────────── Final Classification ────────────────╮
+│ Input: 'The film was okay I guess'                   │
+│         Final Label: NEGATIVE                        │
+│         Correction Required: Yes                     │
+╰──────────────────────────────────────────────────────╯
+       Session Statistics
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
+┃ Metric              ┃ Value  ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━┩
+│ Total Predictions   │ 2      │
+│ Average Confidence  │ 95.71% │
+│ Fallbacks Triggered │ 1      │
+│ Fallback Rate       │ 50.0%  │
+│ Fallback Frequency  │ [█ ]   │
+└─────────────────────┴────────┘
+
+Enter a sentence: quit
+```
+
+## Demo Video
+
+[View the Demo on Google Drive](https://drive.google.com/file/d/11Utos_eanTtRJABIUV6vJRbRBZL7L7jk/view?usp=sharing)
+```
